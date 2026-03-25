@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://haskell.org/hie-bios/hie.yaml.schema.json",
+  "title": "hie.yaml - hie-bios configuration",
+  "description": "Schema for hie.yaml files consumed by hie-bios and subsequently HLS, derived from tests/configs samples at a80d490. ",
+  "type": "object",
+  "required": ["cradle"],
+  "additionalProperties": false,
+  "properties": {
+    "cradle": { "$ref": "#/$defs/cradle" },
+    "dependencies": {
+      "description": "Extra file-level dependencies that trigger a reload.",
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+
+  "$defs": {
+    "cradle": {
+      "description": "Top-level cradle object. Exactly one cradle type must be chosen.",
+      "type": "object",
+      "oneOf": [
+        { "required": ["cabal"],   "properties": { "cabal":   { "$ref": "#/$defs/cabalCradle" } },   "additionalProperties": false },
+        { "required": ["stack"],   "properties": { "stack":   { "$ref": "#/$defs/stackCradle" } },   "additionalProperties": false },
+        { "required": ["bios"],    "properties": { "bios":    { "$ref": "#/$defs/biosCradle" } },    "additionalProperties": false },
+        { "required": ["direct"],  "properties": { "direct":  { "$ref": "#/$defs/directCradle" } },  "additionalProperties": false },
+        { "required": ["multi"],   "properties": { "multi":   { "$ref": "#/$defs/multiCradle" } },   "additionalProperties": false },
+        { "required": ["none"],    "properties": { "none":    { "$ref": "#/$defs/noneCradle" } },    "additionalProperties": false },
+        { "required": ["other"],   "properties": { "other":   { "$ref": "#/$defs/otherCradle" } },   "additionalProperties": false }
+      ]
+    },
+
+    "noneCradle": {
+      "description": "Cradle type that takes no configuration (none / default / bazel / obelisk).",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "additionalProperties": false }
+      ]
+    },
+
+    "cabalCradle": {
+      "description": "Cabal cradle — single component, multi-component list, or object with optional project file.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/cabalSingle" },
+        { "$ref": "#/$defs/cabalMultiList" },
+        { "$ref": "#/$defs/cabalWithComponents" }
+      ]
+    },
+
+    "cabalSingle": {
+      "description": "Single-component cabal config.",
+      "type": "object",
+      "properties": {
+        "component":    { "type": "string" },
+        "cabalProject": { "type": "string", "description": "Path to an alternate cabal.project file." }
+      },
+      "additionalProperties": false
+    },
+
+    "cabalMultiList": {
+      "description": "Multi-component cabal config given as a flat array of {path, component} items.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/pathComponent" },
+      "minItems": 1
+    },
+
+    "cabalWithComponents": {
+      "description": "Multi-component cabal config with an explicit 'components' key and optional project file.",
+      "type": "object",
+      "required": ["components"],
+      "properties": {
+        "cabalProject": { "type": "string" },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pathComponent" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "stackCradle": {
+      "description": "Stack cradle — empty, single component, multi-component list, or object with components.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "additionalProperties": false },
+        { "$ref": "#/$defs/stackSingle" },
+        { "$ref": "#/$defs/stackMultiList" },
+        { "$ref": "#/$defs/stackWithComponents" }
+      ]
+    },
+
+    "stackSingle": {
+      "description": "Single-component stack config.",
+      "type": "object",
+      "properties": {
+        "component": { "type": "string" },
+        "stackYaml":  { "type": "string", "description": "Path to an alternate stack.yaml file." }
+      },
+      "additionalProperties": false
+    },
+
+    "stackMultiList": {
+      "description": "Multi-component stack config given as a flat array of {path, component} items.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/pathComponent" },
+      "minItems": 1
+    },
+
+    "stackWithComponents": {
+      "description": "Multi-component stack config with an explicit 'components' key and optional yaml file.",
+      "type": "object",
+      "required": ["components"],
+      "properties": {
+        "stackYaml": { "type": "string" },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pathComponent" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "biosCradle": {
+      "description": "Custom BIOS program cradle. Supply either 'program' or 'shell' (not both), optionally with a dependency variant.",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["program"],
+          "properties": {
+            "program":            { "type": "string" },
+            "dependency-program": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "required": ["shell"],
+          "properties": {
+            "shell":              { "type": "string" },
+            "dependency-shell":   { "type": "string" },
+            "dependency-program": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "directCradle": {
+      "description": "Direct cradle with an explicit list of GHC arguments.",
+      "type": "object",
+      "required": ["arguments"],
+      "properties": {
+        "arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "multiCradle": {
+      "description": "Multi-cradle that maps directory paths to nested cradle configs.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/multiEntry" },
+      "minItems": 1
+    },
+
+    "multiEntry": {
+      "description": "One entry in a multi-cradle: a path prefix paired with a full nested config.",
+      "type": "object",
+      "required": ["path", "config"],
+      "properties": {
+        "path":   { "type": "string" },
+        "config": {
+          "description": "A full hie.yaml document (must contain a 'cradle' key) used for files under 'path'.",
+          "type": "object",
+          "required": ["cradle"],
+          "properties": {
+            "cradle": { "$ref": "#/$defs/cradle" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "otherCradle": {
+      "description": "Escape hatch for third-party cradle providers (e.g. cabal-helper).",
+      "type": "object",
+      "properties": {
+        "cabal-helper": { "$ref": "#/$defs/cabalHelperCradle" }
+      },
+      "additionalProperties": true
+    },
+
+    "cabalHelperCradle": {
+      "description": "cabal-helper sub-cradle, choosing either cabal or stack as the underlying build tool.",
+      "type": "object",
+      "oneOf": [
+        { "required": ["cabal"], "properties": { "cabal": { "$ref": "#/$defs/noneCradle" } }, "additionalProperties": false },
+        { "required": ["stack"], "properties": { "stack": { "$ref": "#/$defs/noneCradle" } }, "additionalProperties": false }
+      ]
+    },
+
+    "pathComponent": {
+      "description": "A path/component pair used in multi-component cabal and stack configs.",
+      "type": "object",
+      "required": ["path", "component"],
+      "properties": {
+        "path":      { "type": "string" },
+        "component": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
